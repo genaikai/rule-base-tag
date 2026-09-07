@@ -3,7 +3,7 @@
 답변이 중간에 끊겼는지 판정한다.
 """
 
-from .base import Tagger
+from src.base import Tagger
 
 
 class AnswerTruncatedTagger(Tagger):

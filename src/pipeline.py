@@ -19,7 +19,7 @@
 """
 
 from .contracts import INPUT_SCHEMA, is_null, parse
-from .taggers import TAGGERS
+from .taggers import TAGGERS  # src/taggers.py에서 모든 태거 로드
 
 
 def process_data(rows: list[dict]) -> dict:

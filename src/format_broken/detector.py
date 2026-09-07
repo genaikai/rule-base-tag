@@ -4,7 +4,7 @@
 """
 
 import re
-from .base import Tagger
+from src.base import Tagger
 
 
 class FormatBrokenTagger(Tagger):

@@ -3,7 +3,7 @@
 검색하여 가져온 문서가 없거나 비어있는 경우를 판정한다.
 """
 
-from .base import Tagger
+from src.base import Tagger
 
 
 class EmptyRetrievedDocsTagger(Tagger):

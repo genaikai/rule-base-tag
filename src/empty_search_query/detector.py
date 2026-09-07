@@ -3,7 +3,7 @@
 검색 쿼리가 비어있거나 생성되지 않은 경우를 판정한다.
 """
 
-from .base import Tagger
+from src.base import Tagger
 
 
 class EmptySearchQueryTagger(Tagger):
