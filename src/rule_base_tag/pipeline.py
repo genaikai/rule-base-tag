@@ -18,8 +18,7 @@
       return result
 """
 
-from ..framework.contracts import INPUT_SCHEMA, is_null, parse
-from ..framework.taggers import TAGGERS  # src/taggers.py에서 모든 태거 로드
+from .contracts import INPUT_SCHEMA, is_null, parse
 
 
 def process_data(rows: list[dict]) -> dict:
@@ -42,18 +41,3 @@ def process_data(rows: list[dict]) -> dict:
         metrics[f"{name}_mean"] = f"{sum(values) / len(values):.4f}" if values else "n/a"
         metrics[f"{name}_nullrate"] = f"{1 - len(values) / len(rows):.4f}" if rows else "n/a"
     return metrics
-
-
-def apply_tags(rows: list[dict]) -> dict:
-    """모든 태거를 실행하고 결과를 통합한다.
-
-    각 태거가 독립적으로 행 데이터를 검사하고,
-    결과 딕셔너리들을 하나로 합쳐 반환한다.
-
-    Returns:
-        {"tag_name": {"count": N, "rows": [...], "note": "..."}, ...}
-    """
-    results = {}
-    for tagger in TAGGERS:
-        results[tagger.name] = tagger.tag(rows)
-    return results

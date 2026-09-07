@@ -1,7 +1,14 @@
-"""실행 흐름 및 태거 조율.
+"""실행 흐름.
 
-진입점은 run.py 이지만, 메인 로직은 여기서 처리한다.
-모든 태거를 동적으로 로드하고 실행한다.
+진입점은 `src/run.py` 지만 본체는 여기다 — 저쪽은 venv 를 갈아타고 이리로 넘긴다.
+
+바뀔 만한 값은 전부 CLI 인자로 받는다. 실행할 때 코드를 고칠 수 없다고 보므로,
+"코드 한 줄만 고치면 되는데" 하는 순간이 오면 그건 이 규칙이 이미 깨졌다는 신호다.
+
+종료 코드 — 실행 스크립트가 여기에 분기한다:
+    0  정상
+    1  돌았지만 온전치 않다 (계약 위반). 재시도해도 같다
+    2  시작도 못 했다 (인자 누락·입력 없음). 고치고 다시 돌린다
 """
 
 import argparse
@@ -9,16 +16,16 @@ import sys
 import time
 from pathlib import Path
 
-from ..framework.contracts import validate
-from ..framework.load import load_csv
-from .pipeline import process_data, apply_tags
-from ..framework.report import render
-from ..framework.synth import generate
+from .contracts import validate
+from .load import load_csv
+from .pipeline import process_data
+from .report import render
+from .synth import generate
 
 
 def read_version() -> str:
-    """VERSION 파일에서 버전을 읽는다."""
-    path = Path(__file__).resolve().parent.parent / "VERSION"
+    """배포할 때 저장소 루트의 VERSION 에 적힌 값을 읽는다. 없으면 unversioned."""
+    path = Path(__file__).resolve().parent.parent.parent / "VERSION"
     return path.read_text().strip() if path.exists() else "unversioned"
 
 
@@ -38,6 +45,8 @@ def main(argv: list[str] | None = None) -> int:
     ap = build_parser()
     args = ap.parse_args(argv)
 
+    # 조기 실패 — 어떤 계산도 하기 전에 죽는다. 30분 돌린 뒤 인자 하나 때문에
+    # 죽으면 사이클 하나를 통째로 버린다
     if not args.dry_run and not args.data:
         ap.error("--data is required unless --dry-run")
 
@@ -54,11 +63,11 @@ def main(argv: list[str] | None = None) -> int:
             return 2
         source = args.data
 
+    # 진행 상황은 stderr. RUN SUMMARY 가 stdout 이라야 `> log.txt` 가 비지 않는다
     print(f"실행 조건: {source} / {len(rows):,} rows", file=sys.stderr)
 
     report = validate(rows)
     metrics = process_data(rows)
-    tags = apply_tags(rows)
 
     print(render(
         version=read_version(),
@@ -69,7 +78,6 @@ def main(argv: list[str] | None = None) -> int:
         violations=report.violations,
         notes=report.notes,
         metrics=metrics,
-        tags=tags,
         runtime_s=time.perf_counter() - started,
         status="OK" if report.ok else "CONTRACT MISMATCH",
     ))

@@ -1,54 +1,25 @@
-# Rule-Based Tagging Framework
+# rule-based-tagging
 
-LLM 답변을 평가하여 다양한 태그를 부여하는 다중 프로젝트 프레임워크입니다.
+**목표**: 사용자의 Query에 대한 LLM의 답변을 평가하여 다음과 같은 Tag를 부여합니다.
 
-## 구조
+## 📋 Tag 종류
 
-```
-run.py
-src/
-  framework/           (공유 - 수정 금지)
-    contracts.py       입력 스키마
-    base.py            Tagger 베이스
-    report.py, load.py, synth.py
-  
-  template/            (복사해서 프로젝트 생성)
-    main.py, pipeline.py
-  
-  error_keyword/, ...  (10개 태거 - 모든 프로젝트 공유)
-  
-  taggers/             (추가 태거들)
-```
+- **에러 키워드**: 답변 내 오류나 잘못된 정보 포함
+- **답변 잘림**: 생성된 답변이 중간에 끊김
+- **언어 Mixing**: 답변에서 언어가 섞임
+- **Format 깨짐**: 테이블 등 구조화된 포맷이 손상됨
+- **민감정보 포함**: 개인정보, 보안정보 등 민감한 정보 포함
+- **Empty Retrieved Docs**: 검색 결과가 없음
+- **Empty Search Query**: 검색 쿼리가 비어있음
+- **질답 언어 불일치**: Query와 답변의 언어가 다름
+- **유효하지 않은 링크**: 제시된 링크가 유효하지 않음
+- **모델 생각중 멈춤**: 모델이 생각 중에 멈춰 답변을 받지 못함
 
-## 새로운 프로젝트 추가
+## 🏷️ Tag 표시법
 
-```bash
-# 1. template 복사
-cp -r src/template src/my_project
+- **평가 방식**: Boolean 형식 (True/False)
+- **True**: 해당 Tag에 해당하는 문제가 있음
+- **False**: 해당 Tag에 해당하는 문제가 없음
 
-# 2. my_project의 pipeline.py 구현
-$EDITOR src/my_project/pipeline.py
 
-# 3. 실행
-python run.py --dry-run
-```
 
-## 태그 종류
-
-- 에러 키워드
-- 답변 잘림
-- 언어 Mixing
-- Format 깨짐
-- 민감정보 포함
-- Empty Retrieved Docs
-- Empty Search Query
-- 질답 언어 불일치
-- 유효하지 않은 링크
-- 모델 생각중 멈춤
-
-## 사용법
-
-```bash
-python run.py --dry-run          # 합성 데이터 테스트
-python run.py --data input.csv   # 실제 데이터 처리
-```
