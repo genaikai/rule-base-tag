@@ -4,7 +4,7 @@
 """
 
 import re
-from src.base import Tagger
+from src.framework.base import Tagger
 
 
 class ModelThinkingStoppedTagger(Tagger):

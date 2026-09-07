@@ -9,11 +9,11 @@ import sys
 import time
 from pathlib import Path
 
-from .contracts import validate
-from .load import load_csv
+from ..framework.contracts import validate
+from ..framework.load import load_csv
 from .pipeline import process_data, apply_tags
-from .report import render
-from .synth import generate
+from ..framework.report import render
+from ..framework.synth import generate
 
 
 def read_version() -> str:

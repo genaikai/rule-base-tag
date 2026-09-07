@@ -78,6 +78,6 @@ def switch_venv(argv: list[str]) -> None:
 if __name__ == "__main__":
     switch_venv(sys.argv[1:])
 
-    from src.main import main
+    from src.project.main import main
 
     raise SystemExit(main())
