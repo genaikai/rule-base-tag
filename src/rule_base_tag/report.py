@@ -36,6 +36,7 @@ def render(
     violations: list[str],
     notes: list[str],
     metrics: dict,
+    tags: dict | None = None,
     runtime_s: float,
     status: str,
 ) -> str:
@@ -60,6 +61,14 @@ def render(
         lines += [f"  - {n}" for n in notes]
     lines.append("metrics   :")
     lines += [f"  {_pad(k, 16)} {v}" for k, v in metrics.items()]
+
+    # 태그 결과 (있으면)
+    if tags:
+        lines.append("tags      :")
+        for tag_name, tag_result in tags.items():
+            count = tag_result.get("count", 0)
+            lines.append(f"  {_pad(tag_name, 16)} {count}/{n_rows}")
+
     lines.append(f"runtime   : {runtime_s:.1f}s, peak {peak_gb():.2f}GB")
     lines.append(f"status    : {status}")
     lines.append("=" * WIDTH)

@@ -18,7 +18,7 @@ from pathlib import Path
 
 from .contracts import validate
 from .load import load_csv
-from .pipeline import process_data
+from .pipeline import process_data, apply_tags
 from .report import render
 from .synth import generate
 
@@ -68,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
 
     report = validate(rows)
     metrics = process_data(rows)
+    tags = apply_tags(rows)
 
     print(render(
         version=read_version(),
@@ -78,6 +79,7 @@ def main(argv: list[str] | None = None) -> int:
         violations=report.violations,
         notes=report.notes,
         metrics=metrics,
+        tags=tags,
         runtime_s=time.perf_counter() - started,
         status="OK" if report.ok else "CONTRACT MISMATCH",
     ))
