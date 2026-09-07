@@ -27,13 +27,17 @@ def test_missing_column_is_reported_by_name():
 
 
 def test_violation_messages_name_the_field():
-    """'validation failed' 같은 요약은 결함이다 — 사람이 옮겨 적을 것이 있어야 한다."""
+    """'validation failed' 같은 요약은 결함이다 — 사람이 옮겨 적을 것이 있어야 한다.
+
+    이름과 숫자가 같이 있어야 화면을 보고 손으로 베낀 한 줄이 그대로 근거가 된다.
+    """
+    required = next(f for f in INPUT_SCHEMA if not f.nullable and f.used)
     rows = generate(50, seed=0)
     for row in rows:
-        row["grade"] = "Z"
+        row[required.name] = ""
     messages = validate(rows).violations
-    assert messages and all("grade" in m for m in messages)
-    assert any("Z" in m for m in messages)
+    assert messages and all(required.name in m for m in messages)
+    assert any("50" in m for m in messages)
 
 
 def test_empty_input_is_reported():

@@ -37,14 +37,30 @@ class Field:
 #   Field("status", "category", False, allowed=("active", "inactive"))
 #   Field("old_field", "str", True, used=False)  # 무시할 필드
 ################################################################################
+# 컬럼 이름은 여기서만 정한다. 판정 로직은 이 상수를 import 해서 쓴다 —
+# 이름이 실제 로그와 다르면 고칠 곳이 이 네 줄뿐이어야 한다.
+QUERY = "query"
+ANSWER = "answer"
+SEARCH_QUERY = "search_query"
+RETRIEVED_DOCS = "retrieved_docs"
+
 INPUT_SCHEMA: tuple[Field, ...] = (
-    Field("customer_id", "str", False, note="영문+숫자 12자리"),
-    Field("amount", "float", True, rng=(0.0, 1e12)),
-    Field("grade", "category", True, allowed=("A", "B", "C")),
-    # 로그에 있지만 처리 로직이 읽지 않는 필드. 어긋나도 판정은 멀쩡하므로
-    # 위반이 아니라 노트로 내려간다 — 매 실행마다 뜨는 줄이 있으면 사람은
-    # 곧 contract 줄 자체를 안 보게 된다.
-    Field("legacy_memo", "str", True, used=False),
+    Field(QUERY, "str", False,
+          note="사용자 질문 원문. 이름·널 허용 여부 모두 실제 로그로 확인 필요"),
+    # 생각중 멈춤이면 답변이 아예 안 온다. 그 경우가 빈 값으로 들어오는지
+    # 행 자체가 없는지 확인 필요 — 전자면 nullable 이 맞다.
+    Field(ANSWER, "str", True,
+          note="LLM 답변 원문. 빈 값의 의미 확인 필요"),
+    Field(SEARCH_QUERY, "str", True,
+          note="검색용으로 생성된 질의. 검색을 안 탄 행은 빈 값으로 본다"),
+    # 개수인지 본문인지 JSON 배열인지 아직 모른다. 세 경우 다 문자열로 들어오므로
+    # 계약은 통과하는데 판정만 조용히 틀린다 — 실제 로그를 보면 제일 먼저 볼 것.
+    Field(RETRIEVED_DOCS, "str", True,
+          note="검색 결과. 형태 확인 필요 (개수/본문/JSON 배열)"),
+    # 로그에는 있지만 어떤 판정도 읽지 않는다. 어긋나도 판정은 멀쩡하므로 위반이
+    # 아니라 노트로 내려간다 — 매 실행마다 뜨는 줄이 있으면 사람은 곧
+    # contract 줄 자체를 안 보게 되고, 그러면 진짜 위반도 같이 안 보인다.
+    Field("model", "str", True, used=False, note="답변을 만든 모델 이름"),
 )
 ################################################################################
 
