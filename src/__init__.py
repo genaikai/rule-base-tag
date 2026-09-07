@@ -1,4 +1,5 @@
-"""Rule-based tagging framework.
+"""Multi-project tagging framework.
 
-각 태거는 독립적인 패키지로 존재하며, src.taggers를 통해 통합 관리된다.
+각 프로젝트는 독립적인 pipeline을 가지며,
+framework와 taggers는 모든 프로젝트가 공유합니다.
 """
