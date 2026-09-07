@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""새로운 프로젝트 스캐폴드를 다른 저장소로 복사한다.
+"""Rule-based tagging 프로젝트를 설정합니다.
 
-다중 프로젝트 구조:
-  src/
-    framework/     (공유)
-    template/      (복사 용도)
-    A/, B/, C/     (각 프로젝트)
-    taggers/       (공유 태거들)
+프로젝트와 태거들을 생성합니다.
 
 사용법:
-  python adopt.py <대상 폴더>
+  python adopt.py
 """
 
 import shutil
@@ -17,167 +12,148 @@ import sys
 from pathlib import Path
 
 
+def create_tagger_template():
+    """태거 템플릿이 없으면 생성합니다."""
+    taggers_dir = Path("src/taggers")
+    template_dir = taggers_dir / "template"
+
+    if not template_dir.exists():
+        template_dir.mkdir(parents=True, exist_ok=True)
+
+        # __init__.py
+        (template_dir / "__init__.py").write_text(
+            '"""태거 템플릿."""\n'
+            'from .detector import Tagger\n'
+            '__all__ = ["Tagger"]\n'
+        )
+
+        # detector.py
+        (template_dir / "detector.py").write_text(
+            '"""태거 구현."""\n'
+            'from ..framework.base import Tagger\n'
+            '\n'
+            'class TemplateTagger(Tagger):\n'
+            '    """TODO: 태거 이름과 로직 구현하세요."""\n'
+            '    name = "template"\n'
+            '    \n'
+            '    def tag(self, rows: list[dict]) -> dict:\n'
+            '        """행 데이터를 태깅합니다."""\n'
+            '        flagged = []\n'
+            '        for i, row in enumerate(rows):\n'
+            '            if self._detect(row):\n'
+            '                flagged.append(i)\n'
+            '        return {\n'
+            '            "count": len(flagged),\n'
+            '            "rows": flagged,\n'
+            '            "note": f"{len(flagged)}/{len(rows)} 행에서 감지됨",\n'
+            '        }\n'
+            '    \n'
+            '    def _detect(self, row: dict) -> bool:\n'
+            '        """TODO: 검출 로직 구현."""\n'
+            '        return False\n'
+        )
+
+        print(f"  + src/taggers/template/ (태거 템플릿)")
+
+
+def create_project_template():
+    """프로젝트 템플릿이 없으면 생성합니다."""
+    template_dir = Path("src/template")
+    if not template_dir.exists():
+        template_dir.mkdir(parents=True, exist_ok=True)
+        print(f"  + src/template/ (프로젝트 템플릿)")
+
+
 def main():
-    if len(sys.argv) != 2:
-        print("사용법: python adopt.py <대상 폴더>", file=sys.stderr)
-        sys.exit(1)
+    print("Rule-Based Tagging 프로젝트 설정\n")
 
-    dest = Path(sys.argv[1]).resolve()
-    src = Path(__file__).parent
+    # 템플릿 생성
+    print("템플릿 생성 중...")
+    create_project_template()
+    create_tagger_template()
 
-    if dest == src:
-        print("✗ 대상이 이 저장소다", file=sys.stderr)
-        sys.exit(1)
-
-    dest.mkdir(parents=True, exist_ok=True)
-
-    # 필수 파일·폴더
-    essentials = [
-        "scripts/sync.sh",
-        ".gitattributes",
-        ".gitignore",
-        "requirements.txt",
-        "requirements-dev.txt",
-        "configs/env.example.yaml",
-        "TODO.md",
-        "IMPLEMENTATION_SPEC.md",
-        "src/framework",
-        "src/template",
-        "src/taggers",
-        "todo",
-        "tests",
-    ]
-
-    print(f"복사 중: {src} → {dest}")
-
-    for item in essentials:
-        src_path = src / item
-        if not src_path.exists():
-            print(f"  ⊘ {item} (없음)", file=sys.stderr)
-            continue
-
-        dest_path = dest / item
-
-        if src_path.is_dir():
-            if dest_path.exists():
-                print(f"  ⊘ {item} (이미 있음)", file=sys.stderr)
-            else:
-                shutil.copytree(src_path, dest_path)
-                print(f"  + {item}/")
-        else:
-            if dest_path.exists():
-                print(f"  ⊘ {item} (이미 있음)", file=sys.stderr)
-            else:
-                dest_path.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src_path, dest_path)
-                print(f"  + {item}")
-
-    # run.py 복사
-    run_py = src / "run.py"
-    if run_py.exists():
-        shutil.copy2(run_py, dest / "run.py")
-        print(f"  + run.py")
-
-    # 프로젝트 개수 입력
-    print("\n몇 개 프로젝트를 만들까요? (1~10)", end=" ")
+    # 프로젝트 개수
+    print("\n몇 개 프로젝트? (1~5)", end=" ")
     try:
         num_projects = int(input().strip())
-        if not 1 <= num_projects <= 10:
+        if not 1 <= num_projects <= 5:
+            print("1~5 사이의 숫자를 입력하세요")
+            sys.exit(1)
+    except ValueError:
+        print("숫자를 입력하세요")
+        sys.exit(1)
+
+    projects = []
+    for i in range(num_projects):
+        print(f"프로젝트 {i + 1} 이름? ", end="")
+        name = input().strip()
+        if not name or not name.replace("_", "").isalnum():
+            print("유효한 이름 (알파벳, 숫자, 언더스코어)")
+            sys.exit(1)
+        projects.append(name)
+
+    # 태거 개수
+    print(f"\n몇 개 태거? (1~10)", end=" ")
+    try:
+        num_taggers = int(input().strip())
+        if not 1 <= num_taggers <= 10:
             print("1~10 사이의 숫자를 입력하세요")
             sys.exit(1)
     except ValueError:
         print("숫자를 입력하세요")
         sys.exit(1)
 
-    # 각 프로젝트 이름 입력 및 생성
-    print()
-    projects = []
-    for i in range(num_projects):
-        print(f"프로젝트 {i + 1} 이름? ", end="")
+    taggers = []
+    for i in range(num_taggers):
+        print(f"태거 {i + 1} 이름? ", end="")
         name = input().strip()
         if not name or not name.replace("_", "").isalnum():
-            print("유효한 이름을 입력하세요 (알파벳, 숫자, 언더스코어)")
+            print("유효한 이름")
             sys.exit(1)
-        projects.append(name)
+        taggers.append(name)
 
     # 프로젝트 생성
     print("\n생성 중...")
-    template_dir = dest / "src" / "template"
+    template_dir = Path("src/template")
     for proj in projects:
-        proj_dir = dest / "src" / proj
+        proj_dir = Path("src") / proj
         if proj_dir.exists():
             print(f"  ⊘ src/{proj}/ (이미 있음)")
         else:
             shutil.copytree(template_dir, proj_dir)
-            # __init__.py 수정: 주석 제거
-            init_file = proj_dir / "__init__.py"
-            if init_file.exists():
-                init_file.write_text(f'"""프로젝트 {proj}의 로직."""\n')
             print(f"  + src/{proj}/")
 
-    # SCAFFOLD.md 생성
-    scaffold_md = dest / "SCAFFOLD.md"
-    if not scaffold_md.exists():
-        scaffold_md.write_text(f"""# 이 저장소의 구조
-
-다중 프로젝트 개발 구조.
-
-## 구조
-
-```
-src/
-  framework/           (공유 - 수정 금지)
-    contracts.py       입력 스키마
-    load.py            데이터 로드
-    base.py, report.py, synth.py
-
-  template/            (복사 용도)
-    main.py, pipeline.py
-
-""")
-
-        for proj in projects:
-            scaffold_md.write_text(scaffold_md.read_text() + f"  {proj}/               (프로젝트 {proj})\n")
-            scaffold_md.write_text(
-                scaffold_md.read_text() + f"    main.py, pipeline.py\n\n"
+    # 태거 생성
+    taggers_template = Path("src/taggers/template")
+    for tagger in taggers:
+        tagger_dir = Path("src/taggers") / tagger
+        if tagger_dir.exists():
+            print(f"  ⊘ src/taggers/{tagger}/ (이미 있음)")
+        else:
+            shutil.copytree(taggers_template, tagger_dir)
+            # detector.py의 클래스명 수정
+            detector = tagger_dir / "detector.py"
+            content = detector.read_text()
+            class_name = "".join(w.capitalize() for w in tagger.split("_")) + "Tagger"
+            content = content.replace("TemplateTagger", class_name)
+            content = content.replace('name = "template"', f'name = "{tagger}"')
+            detector.write_text(content)
+            # __init__.py 수정
+            init = tagger_dir / "__init__.py"
+            init.write_text(
+                f'"""태거: {tagger}."""\n'
+                f'from .detector import {class_name}\n'
+                f'__all__ = ["{class_name}"]\n'
             )
+            print(f"  + src/taggers/{tagger}/")
 
-        scaffold_md.write_text(
-            scaffold_md.read_text()
-            + """  taggers/             (공유 태거들)
-    language_mixing/, error_keyword/, ...
-```
-
-## 개발 흐름
-
-1. **src/framework/contracts.py** - INPUT_SCHEMA 정의 (한 번)
-2. **src/{프로젝트}/pipeline.py** - 각 프로젝트의 로직 구현
-3. **필요하면 새 태거 추가** - src/{tagger}/ 생성
-
-## 다음 단계
-
-```bash
-# 각 프로젝트 준비
-$EDITOR src/framework/contracts.py
-$EDITOR src/{프로젝트1}/pipeline.py
-$EDITOR src/{프로젝트2}/pipeline.py
-
-# 테스트 (프로젝트별로 run.py를 수정해야 할 수도 있음)
-python run.py --dry-run
-```
-
-자세한 규격: IMPLEMENTATION_SPEC.md
-""")
-        print(f"  + SCAFFOLD.md")
-
-    print(f"\n✓ 완료! {len(projects)}개 프로젝트 생성됨:")
-    for proj in projects:
-        print(f"  - src/{proj}/")
-
-    print("\n다음:")
-    print("  $EDITOR src/framework/contracts.py    # INPUT_SCHEMA 정의")
-    print("  $EDITOR src/{프로젝트}/pipeline.py      # 로직 구현")
-    print("  python run.py --dry-run")
+    print(f"\n✓ 완료!")
+    print(f"  프로젝트: {', '.join(projects)}")
+    print(f"  태거: {', '.join(taggers)}")
+    print(f"\n다음:")
+    print(f"  $EDITOR src/framework/contracts.py")
+    print(f"  $EDITOR src/{projects[0]}/pipeline.py")
+    print(f"  python run.py --dry-run")
 
 
 if __name__ == "__main__":
