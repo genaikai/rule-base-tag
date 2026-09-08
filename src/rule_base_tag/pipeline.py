@@ -17,6 +17,7 @@ from .features import (
     language_mismatch,
     language_mixing,
     model_thinking_stopped,
+    placeholder_leak,
     sensitive_info,
 )
 
@@ -32,6 +33,7 @@ FEATURES = (
     language_mismatch,
     invalid_link,
     model_thinking_stopped,
+    placeholder_leak,
 )
 
 

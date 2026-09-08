@@ -8,8 +8,8 @@
 
     normal        어떤 판정에도 걸리지 않는 깨끗한 데이터.
                   전 구간이 도는지, 그리고 판정이 헛돌지 않는지를 본다
-    adversarial   판정 열 개마다 그 유형을 하나씩 심는다.
-                  실행하면 열 개가 전부 켜져야 한다 — 하나라도 0 이면 그 규칙이 죽은 것이다
+    adversarial   판정마다 그 유형을 하나씩 심는다.
+                  실행하면 전부 켜져야 한다 — 하나라도 0 이면 그 규칙이 죽은 것이다
 
 깨끗한 쪽 표본에는 판정에 걸릴 것을 넣지 않는다. 한글 표본에 로마자를 섞으면
 language_mixing 이 켜지고, 마침표 세 개를 쓰면 answer_truncated 가 켜진다.
@@ -103,6 +103,13 @@ def _d_model_thinking_stopped(row: dict) -> None:
     row[ANSWER] = ""                                  # 답변을 받지 못했다
 
 
+def _d_placeholder_leak(row: dict) -> None:
+    # 플레이스홀더를 순한글로 둔다. 로마자를 쓰면 language_mixing 까지 같이 켜져서
+    # 어느 규칙이 무엇을 잡은 것인지 숫자만 보고는 알 수 없다.
+    row[QUERY] = "환불 절차를 알려줘"
+    row[ANSWER] = "안녕하세요 {{이름}}님, 환불은 영업일 기준 사흘 걸립니다."
+
+
 _DEFECTS = (
     _d_error_keyword,
     _d_answer_truncated,
@@ -114,6 +121,7 @@ _DEFECTS = (
     _d_language_mismatch,
     _d_invalid_link,
     _d_model_thinking_stopped,
+    _d_placeholder_leak,
 )
 
 
@@ -133,7 +141,7 @@ def generate(n: int = 1000, seed: int = 0, mode: str = "normal") -> list[dict]:
     for i in range(n):
         row = _clean_row(rng)
         if mode == "adversarial":
-            # 돌아가며 심어서 n 이 작아도 열 유형이 모두 나오게 한다.
+            # 돌아가며 심어서 n 이 작아도 모든 유형이 나오게 한다.
             # 확률로 고르면 seed 에 따라 어떤 유형은 한 번도 안 나온다.
             if i % 3 == 0:
                 _DEFECTS[(i // 3) % len(_DEFECTS)](row)
