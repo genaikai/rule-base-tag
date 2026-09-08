@@ -1,6 +1,6 @@
 """표·코드블록·괄호 같은 구조가 깨졌는가."""
 
-from ...contracts import ANSWER
+from ...schema import ANSWER
 from .._shared import tally
 
 NAME = "format_broken"

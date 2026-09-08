@@ -6,7 +6,7 @@ model_thinking_stopped 의 몫이다. 둘 다 켜지면 어느 쪽인지 알 수
 
 import re
 
-from ...contracts import ANSWER
+from ...schema import ANSWER
 from .._shared import tally
 
 NAME = "answer_truncated"

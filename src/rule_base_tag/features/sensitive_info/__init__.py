@@ -8,7 +8,7 @@
 
 import re
 
-from ...contracts import ANSWER
+from ...schema import ANSWER
 from .._shared import tally
 
 NAME = "sensitive_info"

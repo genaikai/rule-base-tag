@@ -1,4 +1,4 @@
-"""계약에서 파생된 합성 데이터 생성기.
+"""스키마에서 파생된 합성 데이터 생성기.
 
 가짜 데이터는 **파일이 아니라 코드로** 존재한다. 저장소에 데이터 파일이 없으면
 실수로 커밋될 파일 자체가 없다.
@@ -18,7 +18,7 @@ language_mixing 이 켜지고, 마침표 세 개를 쓰면 answer_truncated 가 
 
 import random
 
-from .contracts import ANSWER, INPUT_SCHEMA, QUERY, RETRIEVED_DOCS, SEARCH_QUERY
+from .schema import ANSWER, INPUT_SCHEMA, QUERY, RETRIEVED_DOCS, SEARCH_QUERY
 
 # 질문·답변은 언어를 맞춰 짝으로 뽑는다. 따로 뽑으면 language_mismatch 가
 # 깨끗한 쪽에서 켜진다.
@@ -117,16 +117,16 @@ _DEFECTS = (
 )
 
 
-def _break_contract(row: dict) -> None:
-    """계약 자체를 깨뜨린다. 판정이 아니라 `contract` 줄에 뜨는 쪽이다."""
+def _break_schema(row: dict) -> None:
+    """스키마 자체를 깨뜨린다. 판정이 아니라 `schema` 줄에 뜨는 쪽이다."""
     row[QUERY] = ""                                   # nullable=False 인데 빈 값
 
 
 def generate(n: int = 1000, seed: int = 0, mode: str = "normal") -> list[dict]:
-    """계약을 읽어 합성 데이터를 만든다. 같은 seed 는 같은 데이터를 준다.
+    """스키마를 읽어 합성 데이터를 만든다. 같은 seed 는 같은 데이터를 준다.
 
     mode="normal"      어떤 판정에도 걸리지 않는 데이터
-    mode="adversarial" 판정 유형을 하나씩 돌아가며 심고, 계약 위반도 섞는다
+    mode="adversarial" 판정 유형을 하나씩 돌아가며 심고, 스키마 위반도 섞는다
     """
     rng = random.Random(seed)
     rows: list[dict] = []
@@ -138,13 +138,13 @@ def generate(n: int = 1000, seed: int = 0, mode: str = "normal") -> list[dict]:
             if i % 3 == 0:
                 _DEFECTS[(i // 3) % len(_DEFECTS)](row)
             if i % 97 == 0:
-                _break_contract(row)
+                _break_schema(row)
         rows.append(row)
     return rows
 
 
-# 계약에 필드를 더했는데 표본을 안 고치면 그 필드가 통째로 빠진 행이 나온다.
-# 조용히 빠지면 `contract` 줄에 "column missing" 으로만 떠서 원인을 찾기 어렵다.
+# 스키마에 필드를 더했는데 표본을 안 고치면 그 필드가 통째로 빠진 행이 나온다.
+# 조용히 빠지면 `schema` 줄에 "column missing" 으로만 떠서 원인을 찾기 어렵다.
 assert {f.name for f in INPUT_SCHEMA} == set(_clean_row(random.Random(0))), (
     "INPUT_SCHEMA 와 합성 표본의 필드가 다르다 — synth.py 의 _clean_row 를 맞춰라"
 )

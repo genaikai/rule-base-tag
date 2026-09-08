@@ -3,7 +3,7 @@
 질문과 답변을 견주는 language_mismatch 와 다르다. 이쪽은 답변 하나만 본다.
 """
 
-from ...contracts import ANSWER
+from ...schema import ANSWER
 from .._shared import tally, scripts_in
 
 NAME = "language_mixing"

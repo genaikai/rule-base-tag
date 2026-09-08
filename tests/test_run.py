@@ -7,7 +7,7 @@ import pytest
 from rule_base_tag import __main__ as run
 from rule_base_tag.synth import generate
 
-REQUIRED_LABELS = ["version", "args", "input", "shape", "contract", "metrics", "runtime", "status"]
+REQUIRED_LABELS = ["version", "args", "input", "shape", "schema", "metrics", "runtime", "status"]
 
 
 def test_dry_run_succeeds_and_prints_summary(capsys):

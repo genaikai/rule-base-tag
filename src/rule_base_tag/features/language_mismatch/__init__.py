@@ -4,7 +4,7 @@
 "언어가 다르다" 고 하면 그건 판정이 아니라 잡음이다.
 """
 
-from ...contracts import ANSWER, QUERY
+from ...schema import ANSWER, QUERY
 from .._shared import dominant_script, tally
 
 NAME = "language_mismatch"

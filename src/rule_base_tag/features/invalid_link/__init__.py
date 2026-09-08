@@ -6,7 +6,7 @@
 
 import re
 
-from ...contracts import ANSWER
+from ...schema import ANSWER
 from .._shared import tally
 
 NAME = "invalid_link"

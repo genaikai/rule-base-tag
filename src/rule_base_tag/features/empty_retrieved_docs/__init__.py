@@ -6,7 +6,7 @@
 
 import re
 
-from ...contracts import RETRIEVED_DOCS
+from ...schema import RETRIEVED_DOCS
 from .._shared import tally
 
 NAME = "empty_retrieved_docs"

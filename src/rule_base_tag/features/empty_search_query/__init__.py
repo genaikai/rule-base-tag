@@ -4,7 +4,7 @@
 답변이 비어 있는 행까지 "검색 질의가 없다" 로 세어진다.
 """
 
-from ...contracts import SEARCH_QUERY
+from ...schema import SEARCH_QUERY
 from .._shared import tally
 
 NAME = "empty_search_query"

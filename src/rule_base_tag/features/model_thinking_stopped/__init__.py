@@ -6,7 +6,7 @@
 
 import re
 
-from ...contracts import ANSWER, QUERY
+from ...schema import ANSWER, QUERY
 from .._shared import tally
 
 NAME = "model_thinking_stopped"

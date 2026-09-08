@@ -45,7 +45,7 @@
 ```
 src/run.py                    진입점
 src/rule_base_tag/
-    contracts.py              입력 계약 — 컬럼 이름의 유일한 출처
+    schema.py                 입력 스키마 — 컬럼 이름의 유일한 출처
     synth.py                  가짜 데이터 (파일이 아니라 코드다)
     load.py                   CSV 읽기
     report.py                 RUN SUMMARY
@@ -60,7 +60,7 @@ src/rule_base_tag/
 
 | 하려는 일 | 고칠 곳 |
 |---|---|
-| 컬럼 이름이 실제 로그와 다르다 | `contracts.py` 위쪽 상수 네 줄 |
+| 컬럼 이름이 실제 로그와 다르다 | `schema.py` 위쪽 상수 네 줄 |
 | 어떤 태그의 판정 기준을 바꾼다 | `features/<태그>/__init__.py` 의 `_hit()` |
 | 태그를 하나 추가한다 | 아래 "새 판정 추가" |
 | 판정 순서를 바꾼다 | `pipeline.py` 의 `FEATURES` |
@@ -73,7 +73,7 @@ src/rule_base_tag/
 ```bash
 python src/run.py --dry-run                    # 가짜 데이터. 전 구간이 도는지
 python src/run.py --dry-run --adversarial      # 판정 열 개가 다 살아있는지
-python src/run.py --data <csv> --limit 1000    # 실데이터 일부로 계약 확인
+python src/run.py --data <csv> --limit 1000    # 실데이터 일부로 스키마 확인
 python src/run.py --data <csv>                 # 전체
 ```
 
@@ -82,7 +82,7 @@ python src/run.py --data <csv>                 # 전체
 | 코드 | 뜻 |
 |---|---|
 | `0` | 정상 |
-| `1` | 돌긴 했는데 계약이 어긋났다. 숫자를 믿을 수 없다 |
+| `1` | 돌긴 했는데 스키마가 어긋났다. 숫자를 믿을 수 없다 |
 | `2` | 시작도 못 했다 (인자 누락, 파일 없음) |
 
 ### 두 가짜 모드가 보증하는 것이 다르다
@@ -114,9 +114,9 @@ cp -r src/rule_base_tag/features/template src/rule_base_tag/features/<태그>
 
 ## 아직 안 된 것
 
-- **계약이 추정이다.** `contracts.py` 의 컬럼 이름 네 개는 실제 로그를 보고 정한 것이
+- **스키마가 추정이다.** `schema.py` 의 컬럼 이름 네 개는 실제 로그를 보고 정한 것이
   아니다. `note` 에 "확인 필요" 라고 적힌 것들이 그렇다. 실데이터로 한 번 돌리면
-  `contract` 줄에 어긋난 것이 이름과 숫자로 뜬다 — 그게 첫 사이클의 수확이다
+  `schema` 줄에 어긋난 것이 이름과 숫자로 뜬다 — 그게 첫 사이클의 수확이다
 - **행 단위 결과를 내보내지 못한다.** 지금 리포트는 태그마다 건수만 낸다.
   "답변 한 행에 태그 열 개" 를 파일로 내려면 결과 파일을 가져올 수 있어야 하는데
   그게 안 되는 환경이다. 무엇을 화면에 담을지 정해야 한다
