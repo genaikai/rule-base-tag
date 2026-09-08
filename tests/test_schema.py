@@ -1,7 +1,7 @@
 """스키마 ↔ 생성기 왕복. 픽스처 파일 없이 generate() 로 데이터를 만든다."""
 
-from rule_base_tag.schema import INPUT_SCHEMA, validate
-from rule_base_tag.synth import generate
+from core.schema import INPUT_SCHEMA, validate
+from core.synth import generate
 
 
 def test_generated_data_satisfies_schema():

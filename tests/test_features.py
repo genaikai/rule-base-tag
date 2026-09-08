@@ -9,7 +9,7 @@
 
 import pytest
 
-from rule_base_tag.features import (
+from core.features import (
     _shared,
     answer_truncated,
     format_broken,
@@ -195,8 +195,8 @@ def test_answer_truncated_still_catches_real_truncation():
 
 
 def _metrics(mode: str) -> dict:
-    from rule_base_tag.pipeline import process_data
-    from rule_base_tag.synth import generate
+    from core.pipeline import process_data
+    from core.synth import generate
     return process_data(generate(300, seed=0, mode=mode))
 
 
@@ -207,7 +207,7 @@ def test_clean_data_trips_no_feature():
 
 
 def test_adversarial_data_trips_every_feature():
-    from rule_base_tag.pipeline import FEATURES
+    from core.pipeline import FEATURES
     metrics = _metrics("adversarial")
     dead = [f.NAME for f in FEATURES if metrics[f.NAME].startswith("0 /")]
     assert not dead, f"합성 데이터가 이 판정을 한 번도 켜지 않았다: {dead}"

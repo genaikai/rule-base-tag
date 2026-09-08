@@ -42,11 +42,11 @@
 | 모델 생각중 멈춤 | `features/model_thinking_stopped/` | `query` + `answer` |
 | 플레이스홀더 누출 | `features/placeholder_leak/` | `answer` |
 
-전부 `src/rule_base_tag/` 아래에 있다.
+전부 `src/core/` 아래에 있다.
 
 ```
 src/run.py                    진입점
-src/rule_base_tag/
+src/core/
     schema.py                 입력 스키마 — 컬럼 이름의 유일한 출처
     synth.py                  가짜 데이터 (파일이 아니라 코드다)
     load.py                   CSV 읽기
@@ -109,7 +109,7 @@ python src/run.py --data <csv>                 # 전체
 ## 새 판정 추가
 
 ```bash
-cp -r src/rule_base_tag/features/template src/rule_base_tag/features/<태그>
+cp -r src/core/features/template src/core/features/<태그>
 ```
 
 그리고 세 군데를 고친다.

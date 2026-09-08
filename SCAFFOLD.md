@@ -11,12 +11,12 @@
 | `.gitattributes` | 이식 제외 목록 |
 | `.gitignore` | 저장소에 애초에 못 들어오게 (데이터·산출물·설정) |
 | `src/run.py` | 진입점. venv 갈아타기 + 위임만 |
-| `src/rule_base_tag/__main__.py` | CLI 인자, 실행 순서, 종료 코드 |
-| `src/rule_base_tag/schema.py` | **입력 스키마.** 프로젝트마다 갈아끼운다 |
-| `src/rule_base_tag/synth.py` | 스키마에서 가짜 데이터 생성 (데이터 파일을 두지 않기 위해) |
-| `src/rule_base_tag/report.py` | RUN SUMMARY. 화면이 유일한 출력이다 |
-| **`src/rule_base_tag/pipeline.py`** | **← 기능 코드를 여기 짠다** |
-| `src/rule_base_tag/load.py` | 입력 포맷을 아는 유일한 곳 |
+| `src/core/__main__.py` | CLI 인자, 실행 순서, 종료 코드 |
+| `src/core/schema.py` | **입력 스키마.** 프로젝트마다 갈아끼운다 |
+| `src/core/synth.py` | 스키마에서 가짜 데이터 생성 (데이터 파일을 두지 않기 위해) |
+| `src/core/report.py` | RUN SUMMARY. 화면이 유일한 출력이다 |
+| **`src/core/pipeline.py`** | **← 기능 코드를 여기 짠다** |
+| `src/core/load.py` | 입력 포맷을 아는 유일한 곳 |
 | `requirements.txt` | 운영 의존성 (버전 고정) |
 | `requirements-dev.txt` | 개발 전용 패키지 (이식 제외) |
 | `configs/env.example.yaml` | 설정 예시. 실값은 운영 폴더에만 |
@@ -49,9 +49,9 @@ python src/run.py --dry-run   # 1번까지 끝났으면 데이터 없이 끝까�
 
 ## 핵심
 
-- **기능 코드는 `src/rule_base_tag/pipeline.py`.** 포맷을 읽는 코드는 `load.py`,
+- **기능 코드는 `src/core/pipeline.py`.** 포맷을 읽는 코드는 `load.py`,
   그 외에는 손댈 일이 거의 없다
-- **기능이 둘 이상이 되면** `src/rule_base_tag/features/<기능>/` 로 가른다
+- **기능이 둘 이상이 되면** `src/core/features/<기능>/` 로 가른다
   (`cp -r features/template features/<기능>`). 단순한 기능도 폴더를 준다 —
   깊이가 고정이라야 나중에 파일을 옆에 만들 때 상대 import 를 안 고친다.
   `pipeline.py` 는 그것들을 불러 합치는 자리가 되고, 공유 코드와 진입점은 그대로
