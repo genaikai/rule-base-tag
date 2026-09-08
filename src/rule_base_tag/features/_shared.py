@@ -26,6 +26,33 @@ def dominant_script(text: str):
     return best if counts[best] >= 3 else None
 
 
+# 코드블록 안의 파이프는 셸 파이프고 괄호는 정규식 문법이지 마크다운 구조가 아니다.
+# 그런데 글자만 보면 구별이 안 되므로, 마크다운을 보는 판정은 먼저 여기를 걷어낸다.
+_FENCED = re.compile(r"^\s*```.*$")
+_INLINE_CODE = re.compile(r"`[^`\n]*`")
+
+
+def prose_of(text: str) -> str:
+    """코드블록·인라인 코드를 지운 나머지. 마크다운 구조를 보는 판정이 쓴다.
+
+    지우되 **줄은 남긴다** — 표·헤딩 검사가 줄 단위로 돌아야 하는데, 줄이 사라지면
+    표의 열 수를 셀 때 코드블록 건너편 줄이 붙어 한 표로 보인다.
+
+    펜스가 안 닫힌 경우는 여는 줄부터 끝까지 코드로 본다. 어디까지가 코드인지
+    정할 수 없는 상태라 어느 쪽으로 정해도 틀리는데, 이쪽이 오탐을 안 만든다 —
+    그리고 안 닫힌 펜스 자체는 format_broken 이 갈라내기 전에 이미 본다.
+    """
+    out: list[str] = []
+    in_code = False
+    for line in text.splitlines():
+        if _FENCED.match(line):
+            in_code = not in_code
+            out.append("")
+            continue
+        out.append("" if in_code else _INLINE_CODE.sub("", line))
+    return "\n".join(out)
+
+
 def tally(hits: int, total: int) -> str:
     """리포트에 한 줄로 들어갈 꼴. 비율은 보는 사람이 나눈다 —
     옮겨 적을 것이 적을수록 좋고, 두 숫자면 원본이 남는다."""

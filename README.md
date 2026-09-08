@@ -14,6 +14,7 @@
 - **질답 언어 불일치**: Query와 답변의 언어가 다름
 - **유효하지 않은 링크**: 제시된 링크가 유효하지 않음
 - **모델 생각중 멈춤**: 모델이 생각 중에 멈춰 답변을 받지 못함
+- **플레이스홀더 누출**: `{{이름}}` 처럼 채워지지 않은 빈칸이 그대로 나감
 
 ## 🏷️ Tag 표시법
 
@@ -39,6 +40,7 @@
 | 질답 언어 불일치 | `features/language_mismatch/` | `query` + `answer` |
 | 유효하지 않은 링크 | `features/invalid_link/` | `answer` |
 | 모델 생각중 멈춤 | `features/model_thinking_stopped/` | `query` + `answer` |
+| 플레이스홀더 누출 | `features/placeholder_leak/` | `answer` |
 
 전부 `src/rule_base_tag/` 아래에 있다.
 
@@ -56,6 +58,16 @@ src/rule_base_tag/
         <태그>/               판정 하나
 ```
 
+판정이 커지면 그 폴더 안에 파일을 더 만든다. `format_broken/` 이 그 예다 —
+`markdown.py` (마크다운 구조·강조) 와 `corruption.py` (문자 손상) 로 갈려 있고,
+`__init__.py` 는 둘을 순서대로 부른다. 폴더 깊이가 처음부터 고정이라
+파일을 옆에 만들 때 상대 import 를 고칠 일이 없다.
+
+**판정 기준의 근거는 그 폴더 안에 `RULES.md` 로 둔다** (`format_broken/RULES.md`).
+무엇을 일부러 안 보는지와 그 이유를 적는 자리다 — 그게 없으면 다음 사람이 뺀 것을
+도로 넣는다. `README.md` 라는 이름은 쓰지 마라: `.gitattributes` 의 `README.md` 줄에
+슬래시가 없어서 **어느 깊이의 README 든 사본에서 조용히 빠진다.**
+
 ## 무엇을 고치나
 
 | 하려는 일 | 고칠 곳 |
@@ -72,7 +84,7 @@ src/rule_base_tag/
 
 ```bash
 python src/run.py --dry-run                    # 가짜 데이터. 전 구간이 도는지
-python src/run.py --dry-run --adversarial      # 판정 열 개가 다 살아있는지
+python src/run.py --dry-run --adversarial      # 판정이 다 살아있는지
 python src/run.py --data <csv> --limit 1000    # 실데이터 일부로 스키마 확인
 python src/run.py --data <csv>                 # 전체
 ```
@@ -88,8 +100,8 @@ python src/run.py --data <csv>                 # 전체
 ### 두 가짜 모드가 보증하는 것이 다르다
 
 ```
---dry-run                 열 개가 전부 0  ← 하나라도 켜지면 그 판정이 오탐이다
---dry-run --adversarial   열 개가 전부 켜짐 ← 하나라도 0 이면 그 판정이 죽은 것이다
+--dry-run                 전부 0  ← 하나라도 켜지면 그 판정이 오탐이다
+--dry-run --adversarial   전부 켜짐 ← 하나라도 0 이면 그 판정이 죽은 것이다
 ```
 
 판정을 고친 뒤에는 둘 다 돌려본다. 실데이터 없이 확인할 수 있는 것이 이 둘이다.
@@ -118,7 +130,26 @@ cp -r src/rule_base_tag/features/template src/rule_base_tag/features/<태그>
   아니다. `note` 에 "확인 필요" 라고 적힌 것들이 그렇다. 실데이터로 한 번 돌리면
   `schema` 줄에 어긋난 것이 이름과 숫자로 뜬다 — 그게 첫 사이클의 수확이다
 - **행 단위 결과를 내보내지 못한다.** 지금 리포트는 태그마다 건수만 낸다.
-  "답변 한 행에 태그 열 개" 를 파일로 내려면 결과 파일을 가져올 수 있어야 하는데
+  "답변 한 행에 태그 전부" 를 파일로 내려면 결과 파일을 가져올 수 있어야 하는데
   그게 안 되는 환경이다. 무엇을 화면에 담을지 정해야 한다
 - **정규식·키워드 목록이 가정이다.** 실제 답변을 보고 좁히거나 넓혀야 한다.
   특히 `sensitive_info` 는 느슨하게 쓰면 숫자 컬럼에 걸린다 — 그 파일의 주석 참고
+- **JSON·HTML·LaTeX 의 포맷 오류는 어느 판정도 잡지 않는다.** `format_broken` 은
+  마크다운과 문자 손상만 본다. 그 셋은 "답변이 그 포맷이어야 한다"는 전제가 있어야
+  성립하는데, 지금 그 전제를 확인할 수 없다 (`schema.py` 의 컬럼조차 추정이다).
+  **지금도 뭔가 켜지긴 하는데 그건 커버가 아니라 `language_mixing`·`language_mismatch`
+  의 오탐이다** — `<div>` 의 로마자가 한글과 섞여서 켜지는 것이라, 태그를 닫든 안 닫든
+  똑같이 켜진다. 실데이터에서 이 형태가 보이면 판정을 따로 세워야 한다
+
+## 판정을 고칠 때
+
+`tests/test_features.py` 에 오탐·미탐 케이스가 표로 있다. 여기 있는 것은 전부 한 번은
+실제로 틀렸던 것들이다 — `1)` 번호목록이 `format_broken` 을 켰고, 유효한 JSON 이
+`answer_truncated` 를 켰다. 규칙을 넓힐 때는 먼저 이 표에 케이스를 더한다.
+
+```bash
+.venv/bin/python -m pytest tests/test_features.py -q
+```
+
+`--dry-run` 두 모드는 유형당 한 개씩만 보장한다. **규칙이 살아있는지는 보지만,
+정상 답변까지 켜는지는 보지 못한다** — 오탐은 이 표에서 지킨다.
