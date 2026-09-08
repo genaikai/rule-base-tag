@@ -53,6 +53,16 @@ def prose_of(text: str) -> str:
     return "\n".join(out)
 
 
+# 그 컬럼이 로그에 아직 없을 때 화면에 뜨는 값. `0 / 1,000` 은 "봤는데 없었다" 고
+# 이것은 "보지 못했다" 다 — 둘을 같은 꼴로 찍으면 규칙이 죽은 것을 알 수 없다.
+ABSENT = "n/a (컬럼 없음)"
+
+
+def column_missing(rows: list[dict], name: str) -> bool:
+    """이 컬럼이 로그에 아예 없는가. 있으면서 빈 것과는 다른 상태다."""
+    return bool(rows) and name not in rows[0]
+
+
 def tally(hits: int, total: int) -> str:
     """리포트에 한 줄로 들어갈 꼴. 비율은 보는 사람이 나눈다 —
     옮겨 적을 것이 적을수록 좋고, 두 숫자면 원본이 남는다."""

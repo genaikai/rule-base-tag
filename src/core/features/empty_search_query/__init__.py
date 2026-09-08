@@ -5,7 +5,7 @@
 """
 
 from ...schema import SEARCH_QUERY
-from .._shared import tally
+from .._shared import ABSENT, column_missing, tally
 
 NAME = "empty_search_query"
 
@@ -13,6 +13,10 @@ EMPTY_TOKENS = frozenset({"", "-", "[]", '""', "''", "none", "null", "n/a", "없
 
 
 def process_data(rows: list[dict]) -> dict:
+    # 이 컬럼은 아직 로그에 없다. 세는 대신 못 봤다고 말한다 — 코드는 컬럼이
+    # 붙는 날 그대로 살아난다.
+    if column_missing(rows, SEARCH_QUERY):
+        return {NAME: ABSENT}
     hits = sum(1 for row in rows if _hit(row))
     return {NAME: tally(hits, len(rows))}
 

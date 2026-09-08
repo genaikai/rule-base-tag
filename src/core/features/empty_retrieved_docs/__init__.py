@@ -7,7 +7,7 @@
 import re
 
 from ...schema import RETRIEVED_DOCS
-from .._shared import tally
+from .._shared import ABSENT, column_missing, tally
 
 NAME = "empty_retrieved_docs"
 
@@ -18,6 +18,10 @@ _COUNT = re.compile(r"^\s*0+\s*(?:건|개|docs?|documents?|results?)?\s*$", re.I
 
 
 def process_data(rows: list[dict]) -> dict:
+    # 이 컬럼은 아직 로그에 없다. 세는 대신 못 봤다고 말한다 — 코드는 컬럼이
+    # 붙는 날 그대로 살아난다.
+    if column_missing(rows, RETRIEVED_DOCS):
+        return {NAME: ABSENT}
     hits = sum(1 for row in rows if _hit(row))
     return {NAME: tally(hits, len(rows))}
 

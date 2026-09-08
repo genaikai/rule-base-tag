@@ -1,6 +1,6 @@
 """스키마 ↔ 생성기 왕복. 픽스처 파일 없이 generate() 로 데이터를 만든다."""
 
-from core.schema import INPUT_SCHEMA, validate
+from core.schema import INPUT_SCHEMA, LABEL, validate
 from core.synth import generate
 
 
@@ -41,7 +41,7 @@ def test_violation_messages_name_the_field():
 
 
 def test_empty_input_is_reported():
-    assert validate([]).violations == ["input       : 0 rows"]
+    assert validate([]).violations == [f"{'input':<{LABEL}}: 0 rows"]
 
 
 def test_unused_fields_do_not_count_as_schema_violations():

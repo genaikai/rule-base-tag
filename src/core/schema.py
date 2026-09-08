@@ -20,49 +20,95 @@ class Field:
 
 
 ################################################################################
-# ⭐ TODO: 이 INPUT_SCHEMA를 실제 프로젝트 데이터에 맞게 수정하세요!
-#
-# 각 Field 필드 설명:
-#   - name:     컬럼 이름 (str)
-#   - dtype:    "int" | "float" | "str" | "datetime" | "category"
-#   - nullable: False = 필수, True = 빈값 허용
-#   - allowed:  category 타입일 때만 허용값 튜플 명시 (선택)
-#   - rng:      (min, max) 범위 검사 (선택, float/int만)
-#   - note:     실제 데이터에서 발견한 사항 기록 (선택)
-#   - used:     False = 스키마에는 있지만 처리 로직이 읽지 않음 (선택)
-#
-# 예시:
-#   Field("user_id", "str", False, note="UUID 형식")
-#   Field("score", "float", True, rng=(0.0, 100.0))
-#   Field("status", "category", False, allowed=("active", "inactive"))
-#   Field("old_field", "str", True, used=False)  # 무시할 필드
+# Field 의 각 자리
+#   name:     컬럼 이름
+#   dtype:    "int" | "float" | "str" | "datetime" | "category"
+#   nullable: False = 필수, True = 빈 값 허용
+#   allowed:  category 일 때 허용값 튜플
+#   rng:      (min, max) 범위 검사 (int/float)
+#   note:     실제 로그에서 확인한 것 / 아직 확인 못 한 것
+#   used:     False = 로그에는 있지만 판정이 읽지 않는다
 ################################################################################
 # 컬럼 이름은 여기서만 정한다. 판정 로직은 이 상수를 import 해서 쓴다 —
-# 이름이 실제 로그와 다르면 고칠 곳이 이 네 줄뿐이어야 한다.
-QUERY = "query"
-ANSWER = "answer"
+# 로그의 컬럼 이름이 바뀌면 고칠 곳이 이 두 줄뿐이어야 한다.
+QUERY = "input_msg_content"
+ANSWER = "output_msg_content"
+
+# 아직 로그에 없는 컬럼. 이것을 읽는 판정 둘(empty_search_query,
+# empty_retrieved_docs)은 코드를 그대로 두고 화면에 n/a 로 뜬다.
+# INPUT_SCHEMA 에 미리 넣어두면 매 실행 "column missing" 위반이 떠서 종료 코드가
+# 1 로 굳고, 그러면 진짜 위반과 구별되지 않는다. 컬럼이 붙는 날 필드를 더한다.
 SEARCH_QUERY = "search_query"
 RETRIEVED_DOCS = "retrieved_docs"
 
 INPUT_SCHEMA: tuple[Field, ...] = (
+    # ── 판정이 읽는 둘 ────────────────────────────────────────────────────
     Field(QUERY, "str", False,
-          note="사용자 질문 원문. 이름·널 허용 여부 모두 실제 로그로 확인 필요"),
-    # 생각중 멈춤이면 답변이 아예 안 온다. 그 경우가 빈 값으로 들어오는지
-    # 행 자체가 없는지 확인 필요 — 전자면 nullable 이 맞다.
+          note="사용자 입력 원문. 빈 값이 실제로 있는지 확인 필요"),
+    # 답변을 못 받고 끝난 턴이 빈 값으로 들어오는지 행 자체가 없는지 아직 모른다.
+    # 전자면 nullable=True 가 맞고, model_thinking_stopped 가 그 행을 잡는다.
     Field(ANSWER, "str", True,
-          note="LLM 답변 원문. 빈 값의 의미 확인 필요"),
-    Field(SEARCH_QUERY, "str", True,
-          note="검색용으로 생성된 질의. 검색을 안 탄 행은 빈 값으로 본다"),
-    # 개수인지 본문인지 JSON 배열인지 아직 모른다. 세 경우 다 문자열로 들어오므로
-    # 스키마는 통과하는데 판정만 조용히 틀린다 — 실제 로그를 보면 제일 먼저 볼 것.
-    Field(RETRIEVED_DOCS, "str", True,
-          note="검색 결과. 형태 확인 필요 (개수/본문/JSON 배열)"),
+          note="모델 답변 원문. 빈 값의 의미 확인 필요"),
+
+    # ── 아래는 전부 used=False ────────────────────────────────────────────
     # 로그에는 있지만 어떤 판정도 읽지 않는다. 어긋나도 판정은 멀쩡하므로 위반이
-    # 아니라 노트로 내려간다 — 매 실행마다 뜨는 줄이 있으면 사람은 곧
-    # schema 줄 자체를 안 보게 되고, 그러면 진짜 위반도 같이 안 보인다.
-    Field("model", "str", True, used=False, note="답변을 만든 모델 이름"),
+    # 아니라 노트로 내려간다 — 매 실행마다 뜨는 줄이 있으면 사람은 곧 schema 줄
+    # 자체를 안 보게 되고, 그러면 진짜 위반도 같이 안 보인다.
+    # 판정이 이 중 하나를 읽기 시작하면 그 줄만 used=True 로 올린다.
+    #
+    # nullable 은 전부 True 로 시작한다. 근거 없이 조였다가 틀리면 매 실행 노트가
+    # 뜨는데, 그건 이 컬럼들에 대해 아무것도 알려주지 않는다.
+
+    # 출처·경로
+    Field("log_table", "str", True, used=False, note="로그가 나온 테이블 이름"),
+    Field("db_route_result", "str", True, used=False, note="라우팅 결과"),
+    Field("assist_name", "str", True, used=False),
+    Field("model_name", "str", True, used=False, note="답변을 만든 모델 이름"),
+    Field("prompt_template_name", "str", True, used=False),
+
+    # 사람·조직. 값 자체가 개인정보다 — 화면에도 스키마에도 실값을 적지 않는다
+    Field("db_dept_name", "str", True, used=False),
+    Field("db_position_name", "str", True, used=False),
+    Field("db_id", "str", True, used=False),
+    Field("dept_div_name", "str", True, used=False),
+    Field("div_name", "str", True, used=False),
+    Field("dept_name", "str", True, used=False),
+    Field("user_name", "str", True, used=False),
+    Field("user_id", "str", True, used=False),
+    Field("user_type", "str", True, used=False,
+          note="값의 가짓수가 적다면 category 로 올릴 자리"),
+    Field("job_grade", "str", True, used=False),
+    Field("job", "str", True, used=False),
+
+    # 시각. fromisoformat 이 소수점 이하 유무를 둘 다 받으므로 포맷 문자열은 두지
+    # 않는다 (turn_start_date 는 초까지, 나머지 둘은 마이크로초까지 온다)
+    Field("chat_id", "str", True, used=False, note="대화 묶음. 한 행은 그 안의 한 턴"),
+    Field("input_msg_id", "str", True, used=False),
+    Field("turn_start_week", "str", True, used=False),
+    Field("turn_start_weekday", "str", True, used=False),
+    Field("turn_start_date", "datetime", True, used=False),
+    Field("input_msg_start_time", "datetime", True, used=False),
+    Field("output_msg_end_time", "datetime", True, used=False),
+
+    # 검색 여부. 검색 질의도 문서 본문도 로그에 없고, 탔는지 여부만 있다
+    Field("rag_yn", "category", True, used=False, allowed=("true", "false")),
+    Field("rag_decide_yn", "category", True, used=False, allowed=("true", "false")),
+
+    # 메시지 종류. 허용값을 아직 모른다 — 알게 되면 category 로 올린다
+    Field("input_msg_type", "str", True, used=False),
+    Field("input_msg_sub_type", "str", True, used=False),
+    Field("output_msg_type", "str", True, used=False),
+    Field("output_msg_sub_type", "str", True, used=False,
+          note="답변이 끊긴 턴이 여기 찍히는지 확인 필요 — 그러면 판정이 읽는다"),
+
+    # 피드백. 대부분의 행에는 없다
+    Field("feedback_type", "str", True, used=False),
+    Field("feedback_score", "int", True, used=False,
+          note="0 부터 시작하는 정수. 상한 확인 필요라 rng 를 걸지 않았다"),
+    Field("feedback_category", "str", True, used=False),
+    Field("feedback_content", "str", True, used=False),
+    Field("feedback_detail_content", "str", True, used=False),
 )
-################################################################################
 
 NULL_TOKENS = frozenset({"", "NA", "N/A", "null", "NULL", "None", "-"})
 
@@ -99,6 +145,11 @@ class Report:
         return not self.violations
 
 
+# 이름 자리의 폭. 가장 긴 컬럼 이름에 한 칸을 더한 값이다 — 좁으면 패딩이 아예
+# 안 먹어서 줄마다 콜론 위치가 달라지고, 눈으로 훑을 때 그 줄을 놓친다.
+LABEL = 24
+
+
 def _field_messages(f: Field, rows: list[dict]) -> list[str]:
     """한 필드의 어긋남을 사람이 그대로 옮겨 적을 수 있는 한 줄씩으로."""
     nulls = bad_type = out_of_range = 0
@@ -121,15 +172,15 @@ def _field_messages(f: Field, rows: list[dict]) -> list[str]:
 
     out: list[str] = []
     if nulls and not f.nullable:
-        out.append(f"{f.name:<12}: {nulls:,} nulls but nullable=False")
+        out.append(f"{f.name:<{LABEL}}: {nulls:,} nulls but nullable=False")
     if bad_type:
-        out.append(f"{f.name:<12}: dtype {f.dtype} expected, {bad_type:,} rows failed to parse")
+        out.append(f"{f.name:<{LABEL}}: dtype {f.dtype} expected, {bad_type:,} rows failed to parse")
     if unexpected:
         shown = sorted(unexpected)[:5]
         more = "" if len(unexpected) <= 5 else f" (+{len(unexpected) - 5} more)"
-        out.append(f"{f.name:<12}: unexpected values {set(shown)}{more}")
+        out.append(f"{f.name:<{LABEL}}: unexpected values {set(shown)}{more}")
     if out_of_range:
-        out.append(f"{f.name:<12}: {out_of_range:,} rows outside {f.rng}")
+        out.append(f"{f.name:<{LABEL}}: {out_of_range:,} rows outside {f.rng}")
     return out
 
 
@@ -141,7 +192,7 @@ def validate(rows: list[dict]) -> Report:
     옮겨 적을 것이 없기 때문이다.
     """
     if not rows:
-        return Report(["input       : 0 rows"], [])
+        return Report([f"{'input':<{LABEL}}: 0 rows"], [])
 
     present = set(rows[0])
     violations: list[str] = []
@@ -150,12 +201,12 @@ def validate(rows: list[dict]) -> Report:
     for f in INPUT_SCHEMA:
         sink = violations if f.used else notes
         if f.name not in present:
-            sink.append(f"{f.name:<12}: column missing")
+            sink.append(f"{f.name:<{LABEL}}: column missing")
             continue
         sink.extend(_field_messages(f, rows))
 
     extra = present - {f.name for f in INPUT_SCHEMA}
     if extra:
         # 선언되지 않은 컬럼은 처리 로직이 읽을 리 없다 — 알려는 주되 위반은 아니다
-        notes.append(f"{'(schema)':<12}: undeclared columns {sorted(extra)}")
+        notes.append(f"{'(schema)':<{LABEL}}: undeclared columns {sorted(extra)}")
     return Report(violations, notes)

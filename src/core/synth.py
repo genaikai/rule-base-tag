@@ -17,35 +17,87 @@ language_mixing 이 켜지고, 마침표 세 개를 쓰면 answer_truncated 가 
 """
 
 import random
+from datetime import datetime, timedelta
 
-from .schema import ANSWER, INPUT_SCHEMA, QUERY, RETRIEVED_DOCS, SEARCH_QUERY
+from .schema import ANSWER, INPUT_SCHEMA, QUERY
 
 # 질문·답변은 언어를 맞춰 짝으로 뽑는다. 따로 뽑으면 language_mismatch 가
 # 깨끗한 쪽에서 켜진다.
 _SAMPLES = {
     "ko": (
-        ("환불 절차를 알려줘", "주문 상세 화면에서 환불을 신청하실 수 있습니다.", "환불 절차"),
-        ("배송이 얼마나 걸리나요", "영업일 기준 이틀에서 사흘 정도 걸립니다.", "배송 기간"),
-        ("비밀번호를 바꾸고 싶어요", "설정 화면의 계정 항목에서 변경하실 수 있습니다.", "비밀번호 변경"),
+        ("환불 절차를 알려줘", "주문 상세 화면에서 환불을 신청하실 수 있습니다."),
+        ("배송이 얼마나 걸리나요", "영업일 기준 이틀에서 사흘 정도 걸립니다."),
+        ("비밀번호를 바꾸고 싶어요", "설정 화면의 계정 항목에서 변경하실 수 있습니다."),
     ),
     "en": (
         ("How do I request a refund?",
-         "You can request a refund from the order details page.", "refund policy"),
+         "You can request a refund from the order details page."),
         ("When will my order arrive?",
-         "Standard delivery takes two to three business days.", "delivery time"),
+         "Standard delivery takes two to three business days."),
         ("Can I change my delivery address?",
-         "Yes, you can update it before the order ships.", "change address"),
+         "Yes, you can update it before the order ships."),
     ),
 }
+
+
+# 판정이 읽지 않는 컬럼들. 값은 **꼴만 맞다** — 실제 로그의 값·분포를 흉내내지
+# 않는다. 여기 있는 것은 "스키마를 통과하는가" 를 보는 용도뿐이고, 판정을 흔들지
+# 않아야 한다. 사람 이름·부서명 자리에 그럴듯한 값을 넣으면 sensitive_info 가
+# 자기 표본이 아닌 곳에서 켜질 수 있다.
+_EPOCH = datetime(2026, 1, 5, 9, 0, 0)
+
+
+def _context_columns(rng: random.Random) -> dict:
+    """판정이 안 읽는 컬럼 34개. 스키마를 만족하는 최소한의 꼴로 채운다."""
+    n = rng.randrange(1, 1000)
+    start = _EPOCH + timedelta(minutes=rng.randrange(0, 60 * 24 * 5),
+                               microseconds=rng.randrange(0, 1_000_000))
+    end = start + timedelta(seconds=rng.uniform(0.5, 30.0))
+    # 피드백은 대부분의 턴에 없다. 빈 값이 널로 읽히는지도 여기서 같이 돈다
+    scored = rng.random() < 0.1
+    return {
+        "log_table": "chat_log",
+        "db_dept_name": f"dept-{n:03d}",
+        "db_position_name": f"position-{n % 7}",
+        "db_id": f"db-{n:05d}",
+        "db_route_result": "routed",
+        "assist_name": "assistant-a",
+        "model_name": "model-a",
+        "dept_div_name": f"div-{n % 5}",
+        "div_name": f"div-{n % 5}",
+        "dept_name": f"dept-{n:03d}",
+        "user_name": f"user-{n:05d}",
+        "user_id": f"u{n:05d}",
+        "user_type": "internal",
+        "job_grade": f"grade-{n % 9}",
+        "job": f"job-{n % 11}",
+        "chat_id": f"chat-{n:06d}",
+        "input_msg_id": f"msg-{n:08d}",
+        "turn_start_week": f"{start:%G-W%V}",
+        "turn_start_weekday": f"{start:%a}",
+        "turn_start_date": f"{start:%Y-%m-%d %H:%M:%S}",
+        "input_msg_start_time": f"{start:%Y-%m-%d %H:%M:%S.%f}",
+        "output_msg_end_time": f"{end:%Y-%m-%d %H:%M:%S.%f}",
+        "prompt_template_name": "template-a",
+        "rag_yn": "true" if n % 2 else "false",
+        "rag_decide_yn": "true" if n % 3 else "false",
+        "input_msg_type": "text",
+        "input_msg_sub_type": "text",
+        "output_msg_type": "text",
+        "output_msg_sub_type": "text",
+        "feedback_type": "thumbs" if scored else "",
+        "feedback_score": str(rng.randrange(0, 6)) if scored else "",
+        "feedback_category": "",
+        "feedback_content": "",
+        "feedback_detail_content": "",
+    }
 
 
 def _clean_row(rng: random.Random) -> dict:
     """어떤 판정에도 걸리지 않는 한 행."""
     lang = rng.choice(list(_SAMPLES))
-    query, answer, search = rng.choice(_SAMPLES[lang])
-    docs = "문서 3건" if lang == "ko" else "3 documents"
-    return {QUERY: query, ANSWER: answer, SEARCH_QUERY: search,
-            RETRIEVED_DOCS: docs, "model": "model-a"}
+    query, answer = rng.choice(_SAMPLES[lang])
+    return {**_context_columns(rng), QUERY: query, ANSWER: answer}
 
 
 # ── 판정 유형별 사고 주입 ──────────────────────────────────────────────────
@@ -81,14 +133,6 @@ def _d_sensitive_info(row: dict) -> None:
     row[ANSWER] = "You can reach us at hong@example.com for the details."
 
 
-def _d_empty_retrieved_docs(row: dict) -> None:
-    row[RETRIEVED_DOCS] = ""
-
-
-def _d_empty_search_query(row: dict) -> None:
-    row[SEARCH_QUERY] = ""
-
-
 def _d_language_mismatch(row: dict) -> None:
     row[QUERY] = "환불 절차를 알려줘"
     row[ANSWER] = "You can request a refund from the order details page."
@@ -110,14 +154,15 @@ def _d_placeholder_leak(row: dict) -> None:
     row[ANSWER] = "안녕하세요 {{이름}}님, 환불은 영업일 기준 사흘 걸립니다."
 
 
+# empty_retrieved_docs · empty_search_query 는 여기 없다 — 읽을 컬럼이 로그에
+# 아직 없어서 심을 자리가 없다. 그 둘은 화면에 n/a 로 뜨고, 규칙이 살아 있는지는
+# tests/test_features.py 의 단위 케이스가 지킨다.
 _DEFECTS = (
     _d_error_keyword,
     _d_answer_truncated,
     _d_language_mixing,
     _d_format_broken,
     _d_sensitive_info,
-    _d_empty_retrieved_docs,
-    _d_empty_search_query,
     _d_language_mismatch,
     _d_invalid_link,
     _d_model_thinking_stopped,

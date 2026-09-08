@@ -12,9 +12,13 @@ import pytest
 from core.features import (
     _shared,
     answer_truncated,
+    empty_retrieved_docs,
+    empty_search_query,
     format_broken,
     placeholder_leak,
 )
+from core.features._shared import ABSENT
+from core.schema import ANSWER, RETRIEVED_DOCS, SEARCH_QUERY
 
 
 # ── prose_of ────────────────────────────────────────────────────────────────
@@ -107,18 +111,18 @@ FORMAT_BROKEN = [
 
 @pytest.mark.parametrize("label,answer", FORMAT_OK, ids=[c[0] for c in FORMAT_OK])
 def test_format_broken_does_not_fire_on_valid_answers(label, answer):
-    assert format_broken._hit({"answer": answer}) is False, f"오탐: {label}"
+    assert format_broken._hit({ANSWER: answer}) is False, f"오탐: {label}"
 
 
 @pytest.mark.parametrize("label,answer", FORMAT_BROKEN, ids=[c[0] for c in FORMAT_BROKEN])
 def test_format_broken_fires_on_broken_answers(label, answer):
-    assert format_broken._hit({"answer": answer}) is True, f"미탐: {label}"
+    assert format_broken._hit({ANSWER: answer}) is True, f"미탐: {label}"
 
 
 def test_format_broken_ignores_empty_answer():
     """빈 답변은 model_thinking_stopped 의 몫이다. 둘 다 켜지면 어느 쪽인지 모른다."""
-    assert format_broken._hit({"answer": ""}) is False
-    assert format_broken._hit({"answer": None}) is False
+    assert format_broken._hit({ANSWER: ""}) is False
+    assert format_broken._hit({ANSWER: None}) is False
 
 
 # ── placeholder_leak ────────────────────────────────────────────────────────
@@ -152,16 +156,16 @@ LEAK_BROKEN = [
 
 @pytest.mark.parametrize("label,answer", LEAK_OK, ids=[c[0] for c in LEAK_OK])
 def test_placeholder_leak_does_not_fire_on_valid_answers(label, answer):
-    assert placeholder_leak._hit({"answer": answer}) is False, f"오탐: {label}"
+    assert placeholder_leak._hit({ANSWER: answer}) is False, f"오탐: {label}"
 
 
 @pytest.mark.parametrize("label,answer", LEAK_BROKEN, ids=[c[0] for c in LEAK_BROKEN])
 def test_placeholder_leak_fires_on_leaked_answers(label, answer):
-    assert placeholder_leak._hit({"answer": answer}) is True, f"미탐: {label}"
+    assert placeholder_leak._hit({ANSWER: answer}) is True, f"미탐: {label}"
 
 
 def test_placeholder_leak_ignores_empty_answer():
-    assert placeholder_leak._hit({"answer": ""}) is False
+    assert placeholder_leak._hit({ANSWER: ""}) is False
 
 
 # ── answer_truncated ────────────────────────────────────────────────────────
@@ -180,12 +184,12 @@ def test_answer_truncated_does_not_fire_on_complete_answers(label, answer):
 
     `</div>` 로 **제대로 닫은** HTML 이 벌을 받는 것도 같은 원인이었다.
     """
-    assert answer_truncated._hit({"answer": answer}) is False, f"오탐: {label}"
+    assert answer_truncated._hit({ANSWER: answer}) is False, f"오탐: {label}"
 
 
 def test_answer_truncated_still_catches_real_truncation():
-    assert answer_truncated._hit({"answer": "환불 절차는 다음과 같습니"}) is True
-    assert answer_truncated._hit({"answer": "환불 절차는..."}) is True
+    assert answer_truncated._hit({ANSWER: "환불 절차는 다음과 같습니"}) is True
+    assert answer_truncated._hit({ANSWER: "환불 절차는..."}) is True
 
 
 # ── 합성 데이터가 판정 전부를 실제로 훑는가 ─────────────────────────────────
@@ -202,7 +206,7 @@ def _metrics(mode: str) -> dict:
 
 def test_clean_data_trips_no_feature():
     dead = {k: v for k, v in _metrics("normal").items()
-            if k != "rows" and not v.startswith("0 /")}
+            if k != "rows" and v != ABSENT and not v.startswith("0 /")}
     assert not dead, f"깨끗한 데이터에서 켜졌다 (오탐): {dead}"
 
 
@@ -211,3 +215,30 @@ def test_adversarial_data_trips_every_feature():
     metrics = _metrics("adversarial")
     dead = [f.NAME for f in FEATURES if metrics[f.NAME].startswith("0 /")]
     assert not dead, f"합성 데이터가 이 판정을 한 번도 켜지 않았다: {dead}"
+
+
+# ── 입력 컬럼이 없는 판정 ───────────────────────────────────────────────────
+# 로그에 그 컬럼이 아직 없다. 판정 코드는 남겨두되, 화면에는 `0` 이 아니라
+# `n/a` 로 떠야 한다 — `0` 은 "봤는데 없었다" 고, 이건 "보지 못했다" 다.
+
+ABSENT_FEATURES = [
+    (empty_search_query, SEARCH_QUERY),
+    (empty_retrieved_docs, RETRIEVED_DOCS),
+]
+
+
+@pytest.mark.parametrize("feature,column", ABSENT_FEATURES,
+                         ids=[f.NAME for f, _ in ABSENT_FEATURES])
+def test_feature_says_n_a_when_its_column_is_absent(feature, column):
+    from core.synth import generate
+    rows = generate(10, seed=0)
+    assert column not in rows[0], f"{column} 이 생겼다면 이 판정을 되살려라"
+    assert feature.process_data(rows) == {feature.NAME: ABSENT}
+
+
+@pytest.mark.parametrize("feature,column", ABSENT_FEATURES,
+                         ids=[f.NAME for f, _ in ABSENT_FEATURES])
+def test_feature_counts_again_once_its_column_appears(feature, column):
+    """컬럼이 붙는 날 판정이 그대로 살아나는지. 코드를 남겨두는 이유가 이것이다."""
+    rows = [{column: ""}, {column: "환불 절차"}]
+    assert feature.process_data(rows) == {feature.NAME: "1 / 2"}

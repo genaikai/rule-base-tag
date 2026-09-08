@@ -11,6 +11,11 @@ import unicodedata
 
 WIDTH = 45
 
+# 지표 이름 자리의 폭. 가장 긴 지표 이름에 한 칸을 더한 값이다 — 좁으면 패딩이
+# 안 먹어서 값의 시작 칸이 줄마다 달라지고, 눈으로 훑을 때 그 줄을 놓친다.
+# 판정을 추가하다 이름이 더 길어지면 여기를 늘린다.
+LABEL = 23
+
 
 def peak_gb() -> float:
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
@@ -59,7 +64,7 @@ def render(
         lines.append(f"notes     : {len(notes)} (판정에 영향 없음)")
         lines += [f"  - {n}" for n in notes]
     lines.append("metrics   :")
-    lines += [f"  {_pad(k, 16)} {v}" for k, v in metrics.items()]
+    lines += [f"  {_pad(k, LABEL)} {v}" for k, v in metrics.items()]
     lines.append(f"runtime   : {runtime_s:.1f}s, peak {peak_gb():.2f}GB")
     lines.append(f"status    : {status}")
     lines.append("=" * WIDTH)
