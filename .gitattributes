@@ -21,3 +21,5 @@ scripts/adopt.sh         export-ignore
 scripts/hooks/           export-ignore
 .gitattributes           export-ignore
 SCAFFOLD.md              export-ignore
+configs/env.example.yaml  export-ignore
+scripts/sync-allow.txt   export-ignore
